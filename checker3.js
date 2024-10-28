@@ -66,7 +66,7 @@ async function setRandomCookies(page) {
 // Fungsi untuk cek email terdaftar di Xfinity
 async function checkEmail(email) {
     const browser = await puppeteer.launch({
-        headless: true, // Ubah ke false untuk mode debugging
+        headless: true,
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox',
@@ -74,14 +74,14 @@ async function checkEmail(email) {
             '--disable-dev-shm-usage',
             '--disable-software-rasterizer',
             '--no-zygote',
-			'--disable-extensions',
-			'--disable-background-timer-throttling',
-			'--disable-background-networking',
-			'--disable-default-apps',
-			'--disable-translate',
-			'--no-first-run',
-			'--process-per-site',
-			'--memory-pressure-thresholds=low'
+            '--disable-extensions',
+            '--disable-background-timer-throttling',
+            '--disable-background-networking',
+            '--disable-default-apps',
+            '--disable-translate',
+            '--no-first-run',
+            '--process-per-site',
+            '--memory-pressure-thresholds=low'
         ],
         executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', // Jalur ke instalasi Chrome di Windows
         slowMo: 100 // Menambahkan slow motion 100ms
