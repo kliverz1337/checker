@@ -3,6 +3,7 @@ const expressStatusMonitor = require('express-status-monitor');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const fs = require('fs');
+const UserAgent = require('user-agents'); // Import user-agents
 
 // Menggunakan Stealth Plugin
 puppeteer.use(StealthPlugin());
@@ -15,15 +16,10 @@ const colors = {
     yellow: '\x1b[33m',
 };
 
-// Daftar User-Agent yang akan digunakan
-const userAgents = [
-    // Daftar User-Agent di sini
-];
-
-// Fungsi untuk memilih User-Agent acak
+// Fungsi untuk memilih User-Agent acak dari modul user-agents
 function getRandomUserAgent() {
-    const randomIndex = Math.floor(Math.random() * userAgents.length);
-    return userAgents[randomIndex];
+    const userAgent = new UserAgent({ deviceCategory: 'mobile' }); // Hanya untuk perangkat seluler
+    return userAgent.toString();
 }
 
 // Fungsi untuk delay
@@ -31,16 +27,15 @@ function delay(time) {
     return new Promise(resolve => setTimeout(resolve, time));
 }
 
-// Fungsi untuk membuat cookie random
+// Fungsi untuk membuat cookie random yang lebih realistis
 function generateRandomCookies() {
     const randomString = () => Math.random().toString(36).substring(2, 15); // String acak
     const cookies = [
-        { name: 'session', value: randomString(), domain: '.xfinity.com', path: '/' },
-        { name: 'user_id', value: randomString(), domain: '.xfinity.com', path: '/' },
-        { name: 'token', value: randomString(), domain: '.xfinity.com', path: '/' },
-        { name: 'csrf_token', value: randomString(), domain: '.xfinity.com', path: '/' },
-        { name: 'user_preferences', value: randomString(), domain: '.xfinity.com', path: '/' },
-        { name: 'session_id', value: randomString(), domain: '.xfinity.com', path: '/' },
+        { name: 'session_id', value: randomString(), domain: '.xfinity.com', path: '/', httpOnly: true, secure: true },
+        { name: 'user_id', value: randomString(), domain: '.xfinity.com', path: '/', httpOnly: true, secure: true },
+        { name: 'csrf_token', value: randomString(), domain: '.xfinity.com', path: '/', httpOnly: true, secure: true },
+        { name: 'preferences', value: 'some_preference', domain: '.xfinity.com', path: '/', secure: true },
+        { name: 'locale', value: 'en-US', domain: '.xfinity.com', path: '/' },
         // Tambahkan cookie lainnya sesuai kebutuhan
     ];
     return cookies;
@@ -80,7 +75,7 @@ async function checkEmail(email) {
 
     await setRandomCookies(page); // Set cookie random
 
-    // Set User-Agent acak
+    // Set User-Agent acak menggunakan modul user-agents
     const userAgent = getRandomUserAgent();
     await page.setUserAgent(userAgent);
     console.log(`${colors.green}[INFO] Random User-Agent set: ${userAgent}${colors.reset}`);
@@ -144,7 +139,7 @@ const PORT = process.env.PORT || 3000;
 app.get('/validator', async (req, res) => {
     const email = req.query.email; // Ambil email dari query parameter
     if (!email) {
-        return res.status(400).send(`Email must be provided as a query parameter`);
+        return res.send(`Email must be provided as a query parameter`);
     }
     
     // Hasil dari checkEmail bisa dilempar tanpa try-catch
