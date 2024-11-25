@@ -123,14 +123,18 @@ async function checkEmail(email) {
             console.log(`${colors.yellow}[FORBIDDEN] ${email}${colors.reset}`);
             fs.appendFileSync('bad.txt', `${email}\n`); // Simpan ke forbidden.txt
             return { email: email, status: 'FORBIDDEN' };
+        } else if (content.includes("Enter your password")) {
+            console.log(`${colors.green}[SUCCESS] ${email}${colors.reset}`);
+            fs.appendFileSync('valid.txt', `${email}\n`); // Simpan ke valid.txt
+            return { email: email, status: 'SUCCESS' };
         } else if (content.includes('Something went wrong')) {
             console.log(`${colors.red}[ERROR] ${email}${colors.reset}`);
             fs.appendFileSync('bad.txt', `${email}\n`); // Simpan ke error.txt
             return { email: email, status: 'ERROR' };
         } else {
-            console.log(`${colors.green}[SUCCESS] ${email}${colors.reset}`);
-            fs.appendFileSync('valid.txt', `${email}\n`); // Simpan ke valid.txt
-            return { email: email, status: 'SUCCESS' };
+            console.log(`${colors.yellow}[UNKNOWN] ${email}${colors.reset}`);
+            fs.appendFileSync('unknown.txt', `${email}\n`); // Simpan ke unknown.txt
+            return { email: email, status: 'UNKNOWN' };
         }
 
     } finally {
